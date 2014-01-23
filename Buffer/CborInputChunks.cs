@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using Assets.DiverseWorlds.Cbor.Exception;
+using Telegram.Core.Logging;
 
 namespace Assets.DiverseWorlds.Cbor.Buffer {
     
     public class CborInputChunks : CborInput {
+        private static readonly Logger logger = LoggerFactory.getLogger(typeof(CborInputChunks));
         private readonly List<MemoryStream> chunks = new List<MemoryStream>();
         public event InputHandler InputEvent;
 
@@ -34,6 +36,7 @@ namespace Assets.DiverseWorlds.Cbor.Buffer {
                     return true;
                 }
             }
+
             return false;
         }
 

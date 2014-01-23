@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using Telegram.Core.Logging;
 
 namespace Assets.DiverseWorlds.Cbor {
     public class CborWriter : IDisposable {
+        private static readonly Logger logger = LoggerFactory.getLogger(typeof(CborWriter));
+
         private readonly Stream output;
 
         public CborWriter(Stream output) {
@@ -87,6 +90,13 @@ namespace Assets.DiverseWorlds.Cbor {
         public void Write(byte[] value) {
             WriteTypeAndValue(2, (uint) value.Length);
             output.Write(value, 0, value.Length);
+        }
+
+        public void Write(double value) {
+            WriteTypeAndValue(7, 27u);
+            byte[] data = BitConverter.GetBytes(value);
+            //logger.info("write double date: {0}", BitConverter.ToString(data).Replace("-","").ToLower());
+            output.Write(data, 0, 8);
         }
 
         public void Write(byte[] value, int offset, int limit) {

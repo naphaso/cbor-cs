@@ -1,6 +1,8 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using Assets.DiverseWorlds.Cbor.Buffer;
 using Assets.DiverseWorlds.Cbor.Exception;
+using Telegram.Core.Logging;
 
 namespace Assets.DiverseWorlds.Cbor {
     internal enum CborReaderState {
@@ -14,10 +16,14 @@ namespace Assets.DiverseWorlds.Cbor {
         Array,
         Map,
         Tag,
-        Special
+        Special,
+
+        FloatData,
     }
 
     public class CborReader {
+        private static readonly Logger logger = LoggerFactory.getLogger(typeof(CborReader));
+
         private readonly CborInput _input;
         private CborReaderListener _listener;
         private int _size; // current element size in bytes
@@ -66,10 +72,15 @@ namespace Assets.DiverseWorlds.Cbor {
                     return TryParseTag();
                 case CborReaderState.Special:
                     return TryParseSpecial();
+
+                case CborReaderState.FloatData:
+                    return TryParseFloat();
                 default:
                     return false;
             }
         }
+
+
 
         private bool TryParseType() {
             if(!_input.HasBytes(1)) {
@@ -271,15 +282,17 @@ namespace Assets.DiverseWorlds.Cbor {
                 return false;
             }
 
+            uint code;
+
             switch(_size) {
                 case 1:
-                    _listener.OnSpecial(_input.GetInt8());
+                    code = _input.GetInt8();
                     break;
                 case 2:
-                    _listener.OnSpecial(_input.GetInt16());
+                    code = _input.GetInt16();
                     break;
                 case 4:
-                    _listener.OnSpecial(_input.GetInt32());
+                    code = _input.GetInt32();
                     break;
                 case 8:
                     throw new CborException("8 bytes special codes not supported");
@@ -287,7 +300,17 @@ namespace Assets.DiverseWorlds.Cbor {
                     throw new CborException("invalid special code size");
             }
 
-            _state = CborReaderState.Type;
+            switch (code) {
+                case 27: // double
+                    _size = 8;
+                    _state = CborReaderState.FloatData;
+                    break;
+                default:
+                    _listener.OnSpecial(code);
+                    _state = CborReaderState.Type;
+                    break;
+            }
+
 
             return true;
         }
@@ -463,6 +486,27 @@ namespace Assets.DiverseWorlds.Cbor {
                     break;
                 default:
                     throw new CborException("invalid positive integer size");
+            }
+
+            _state = CborReaderState.Type;
+
+            return true;
+        }
+
+        private bool TryParseFloat() {
+            if (!_input.HasBytes(_size)) {
+                return false;
+            }
+
+            byte[] data = _input.GetBytes(8);
+            //logger.info("parse float: {0}", BitConverter.ToString(data).Replace("-","").ToLower());
+
+            switch (_size) {
+                case 8: //double
+                    _listener.OnDouble(BitConverter.ToDouble(data, 0));
+                    break;
+                default:
+                    throw new CborException("invalid float size");
             }
 
             _state = CborReaderState.Type;

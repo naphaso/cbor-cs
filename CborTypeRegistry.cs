@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Data.Odbc;
 using System.Linq;
 using System.Reflection;
 using Assets.DiverseWorlds.Cbor.Attribute;
@@ -25,10 +27,42 @@ namespace Assets.DiverseWorlds.Cbor {
                 throw new CborException("invalid object representation");
             }
 
+            
+
             CborPropertyTemplate propertyTemplate;
             if(!propertiesByName.TryGetValue(property, out propertyTemplate)) {
                 throw new CborException("type " + type.Name + " not contains property " + property);
             }
+
+            Type ptype = propertyTemplate.property.PropertyType;
+            //bool nullable = false;
+            if (ptype.IsGenericType && ptype.GetGenericTypeDefinition() == typeof (Nullable<>)) {
+                ptype = ptype.GetGenericArguments()[0];
+            }
+
+            if (value is int){
+                if(ptype == typeof (UInt64)) { // TODO: fix typecasts
+                    propertyTemplate.property.SetValue(obj, (ulong)(int)value, null);
+                    return;
+                }
+
+                if (ptype.IsEnum) {
+                    propertyTemplate.property.SetValue(obj, Enum.ToObject(ptype, value), null); 
+
+                    return;
+                }
+            }
+
+            /*if (value is IList && propertyTemplate.property.PropertyType.IsArray) {
+                IList list = value as IList;
+                Array array = (Array) Activator.CreateInstance(propertyTemplate.property.PropertyType.GetElementType(),
+                    list.Count);
+                for (int i = 0; i < list.Count; i++) {
+                    array.SetValue(list[i], i);
+                }
+                propertyTemplate.property.SetValue(obj, array, null);
+                return;
+            }*/
 
             propertyTemplate.property.SetValue(obj, value, null);
         }
@@ -60,7 +94,7 @@ namespace Assets.DiverseWorlds.Cbor {
 
         private void ProcessModels() {
             foreach(var modelType in from type in Assembly.GetExecutingAssembly().GetTypes()
-                                     where type.Namespace != null && type.Namespace.Equals("Assets.DiverseWorlds.Model", StringComparison.Ordinal)
+                                     where type.Namespace != null && type.Namespace.Equals("TestServer.Model", StringComparison.Ordinal)
                                      select type) {
                 var objectAttribute = System.Attribute.GetCustomAttribute(modelType, typeof(CborObject));
                 if(!(objectAttribute is CborObject)) {

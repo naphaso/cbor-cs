@@ -8,5 +8,6 @@
         void OnMap(int size);
         void OnTag(uint tag);
         void OnSpecial(uint code);
+        void OnDouble(double value);
     }
 }
