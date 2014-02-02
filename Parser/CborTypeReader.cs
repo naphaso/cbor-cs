@@ -1,146 +1,338 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using Assets.DiverseWorlds.Cbor.Exception;
-using Telegram.Core.Logging;
-using TestServer.Cbor;
+﻿// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="CborTypeReader.cs" company="">
+//   
+// </copyright>
+// <summary>
+//   The cbor object read completion handler.
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 
-namespace Assets.DiverseWorlds.Cbor.Parser {
+namespace Naphaso.Cbor.Parser
+{
+    using System;
+
+    using DiverseWorlds.Logic.Network.Cbor.Exception;
+
+    /// <summary>
+    /// The cbor object read completion handler.
+    /// </summary>
     public delegate void CborObjectReadCompletionHandler();
-    public abstract class CborTypeReader : CborReaderListener {
-        private static readonly Logger logger = LoggerFactory.getLogger(typeof(CborTypeReader));
-        private const bool Debug = false;
 
+    /// <summary>
+    /// The cbor type reader.
+    /// </summary>
+    public abstract class CborTypeReader : CborReaderListener
+    {
+        #region Fields
+
+        /// <summary>
+        /// The reader.
+        /// </summary>
         protected readonly CborReader reader;
-        public event CborObjectReadCompletionHandler CompleteEvent;
-        private CborTypeReader innerTypeReader;
-        private uint currentTag;
+
+        /// <summary>
+        /// The next type.
+        /// </summary>
         protected Type nextType;
-        protected CborTypeReader(CborReader reader) {
+
+        /// <summary>
+        /// The current tag.
+        /// </summary>
+        private uint currentTag;
+
+        /// <summary>
+        /// The inner type reader.
+        /// </summary>
+        private CborTypeReader innerTypeReader;
+
+        #endregion
+
+        #region Constructors and Destructors
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CborTypeReader"/> class.
+        /// </summary>
+        /// <param name="reader">
+        /// The reader.
+        /// </param>
+        protected CborTypeReader(CborReader reader)
+        {
             this.reader = reader;
             reader.Listener = this;
-            nextType = null;
+            this.nextType = null;
         }
 
-        protected void OnCompete() {
-            CompleteEvent();
-        }
-        public abstract object Result();
-        public abstract void OnObject(object obj);
+        #endregion
 
-        public void OnInteger(uint value, int sign) {
-            
-            if (currentTag == 1) { // datetime
+        #region Public Events
+
+        /// <summary>
+        /// The complete event.
+        /// </summary>
+        public event CborObjectReadCompletionHandler CompleteEvent;
+
+        #endregion
+
+        #region Public Methods and Operators
+
+        /// <summary>
+        /// The on array.
+        /// </summary>
+        /// <param name="size">
+        /// The size.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnArray(int size)
+        {
+            if (this.currentTag != 0)
+            {
+                throw new CborException("invalid tagging on type");
+            }
+
+            this.innerTypeReader = new CborListReader(this.reader, size, this.nextType);
+
+            this.innerTypeReader.CompleteEvent += this.InnerTypeReaderOnCompleteEvent;
+            this.reader.Listener = this.innerTypeReader;
+        }
+
+        /// <summary>
+        /// The on bytes.
+        /// </summary>
+        /// <param name="value">
+        /// The value.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnBytes(byte[] value)
+        {
+            if (this.currentTag != 0)
+            {
+                throw new CborException("invalid tagging on type");
+            }
+
+            this.OnObject(value);
+        }
+
+        /// <summary>
+        /// The on double.
+        /// </summary>
+        /// <param name="value">
+        /// The value.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnDouble(double value)
+        {
+            if (this.currentTag != 0)
+            {
+                throw new CborException("invalid tagging on type");
+            }
+
+            this.OnObject(value);
+        }
+
+        /// <summary>
+        /// The on integer.
+        /// </summary>
+        /// <param name="value">
+        /// The value.
+        /// </param>
+        /// <param name="sign">
+        /// The sign.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnInteger(uint value, int sign)
+        {
+            if (this.currentTag == 1)
+            {
+                // datetime
+                DateTime dateTime = DateTimeExtensions.DateTimeFromUnixTimestampSeconds(sign * value);
+                this.OnObject(dateTime);
+                this.currentTag = 0;
+                return;
+            }
+
+            if (this.currentTag != 0)
+            {
+                throw new CborException("invalid tagging on type");
+            }
+
+            this.OnObject(sign * (int)value); // TODO: check overflow
+        }
+
+        /// <summary>
+        /// The on long.
+        /// </summary>
+        /// <param name="value">
+        /// The value.
+        /// </param>
+        /// <param name="sign">
+        /// The sign.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnLong(ulong value, int sign)
+        {
+            // logger.info("onLong");
+            if (this.currentTag == 1)
+            {
+                // datetime
                 DateTime dateTime = DateTimeExtensions.DateTimeFromUnixTimestampSeconds(sign * (long)value);
-                if (Debug) { logger.info("datetime: {0}", dateTime); }
-                OnObject(dateTime);
-                currentTag = 0;
+                this.OnObject(dateTime);
+                this.currentTag = 0;
                 return;
             }
 
-            if (currentTag != 0) throw new CborException("invalid tagging on type");
-
-            if (Debug) { logger.info("integer: {0}", sign * (int)value); }
-            OnObject(sign * (int)value); // TODO: check overflow
-        }
-
-        public void OnLong(ulong value, int sign) {
-            //logger.info("onLong");
-            if (currentTag == 1) { // datetime
-                DateTime dateTime = DateTimeExtensions.DateTimeFromUnixTimestampSeconds(sign*(long) value);
-                if (Debug) { logger.info("datetime: {0}", dateTime); }
-                OnObject(dateTime);
-                currentTag = 0;
-                return;
+            if (this.currentTag != 0)
+            {
+                throw new CborException("invalid tagging on type");
             }
 
-            if (currentTag != 0) throw new CborException("invalid tagging on type");
-            if (Debug) { logger.info("long: {0}", sign * (long)value); }
-            OnObject(sign * (long)value); // TODO: check overflow
+            this.OnObject(sign * (long)value); // TODO: check overflow
         }
 
-        public void OnBytes(byte[] value) {
-            if (currentTag != 0) throw new CborException("invalid tagging on type");
-            if (Debug) { logger.info("bytes: {0}", BitConverter.ToString(value).Replace("-","").ToLower()); }
-            OnObject(value);
-        }
+        /// <summary>
+        /// The on map.
+        /// </summary>
+        /// <param name="size">
+        /// The size.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnMap(int size)
+        {
+            if (this.currentTag != 0)
+            {
+                // parse object
+                CborTypeTemplate innerTemplate = CborTypeRegistry.Instance.GetTemplate(this.currentTag);
 
-        public void OnString(string value) {
-            if (currentTag != 0) throw new CborException("invalid tagging on type");
-            if (Debug) { logger.info("string: \"{0}\"", value); }
-            OnObject(value);
-        }
-
-        public void OnArray(int size) {
-            if (currentTag != 0) throw new CborException("invalid tagging on type");
-            if (Debug) { logger.info("array: {0}", size); }
-            innerTypeReader = new CborListReader(reader, size, nextType);
-            
-            innerTypeReader.CompleteEvent += InnerTypeReaderOnCompleteEvent;
-            reader.Listener = innerTypeReader;
-        }
-
-        public void OnMap(int size) {
-            if (Debug) { logger.info("map: {0}, tag {1}", size, currentTag); }
-            if (currentTag != 0) { // parse object
-                CborTypeTemplate innerTemplate = CborTypeRegistry.Instance.GetTemplate(currentTag);
-
-                if (innerTemplate == null) {
-                    throw new CborException("unknown object tag: " + currentTag);
+                if (innerTemplate == null)
+                {
+                    throw new CborException("unknown object tag: " + this.currentTag);
                 }
 
-                currentTag = 0;
+                this.currentTag = 0;
 
-                innerTypeReader = new CborObjectReader(reader, innerTemplate, size);
-                innerTypeReader.CompleteEvent += InnerTypeReaderOnCompleteEvent;
-                reader.Listener = innerTypeReader;
-            } else { // parse map
-                innerTypeReader = new CborMapReader(reader, size, nextType);
-                innerTypeReader.CompleteEvent += InnerTypeReaderOnCompleteEvent;
-                reader.Listener = innerTypeReader;
+                this.innerTypeReader = new CborObjectReader(this.reader, innerTemplate, size);
+                this.innerTypeReader.CompleteEvent += this.InnerTypeReaderOnCompleteEvent;
+                this.reader.Listener = this.innerTypeReader;
+            }
+            else
+            {
+                // parse map
+                this.innerTypeReader = new CborMapReader(this.reader, size, this.nextType);
+                this.innerTypeReader.CompleteEvent += this.InnerTypeReaderOnCompleteEvent;
+                this.reader.Listener = this.innerTypeReader;
             }
         }
 
-        private void InnerTypeReaderOnCompleteEvent() {
-            reader.Listener = this;
-            OnObject(innerTypeReader.Result());
-            innerTypeReader = null;
-        }
+        /// <summary>
+        /// The on object.
+        /// </summary>
+        /// <param name="obj">
+        /// The obj.
+        /// </param>
+        public abstract void OnObject(object obj);
 
-        public void OnTag(uint tag) {
-            if (currentTag != 0) throw new CborException("invalid tagging on type");
+        /// <summary>
+        /// The on special.
+        /// </summary>
+        /// <param name="code">
+        /// The code.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnSpecial(uint code)
+        {
+            if (this.currentTag != 0)
+            {
+                throw new CborException("invalid tagging on type");
+            }
 
-            if (Debug) { logger.info("tag: {0}", tag); }
-
-            currentTag = tag;
-        }
-
-        public void OnSpecial(uint code) {
-            if (currentTag != 0) throw new CborException("invalid tagging on type");
-            if (Debug) { logger.info("special: {0}", code); }
-            switch (code) {
+            switch (code)
+            {
                 case 20: // false
-                    OnObject(false);
+                    this.OnObject(false);
                     break;
                 case 21: // true
-                    OnObject(true);
+                    this.OnObject(true);
                     break;
                 case 22: // null
-                    OnObject(null);
+                    this.OnObject(null);
                     break;
                 default:
                     throw new CborException("unknown special value");
             }
         }
 
-        public void OnDouble(double value) {
-            if (currentTag != 0) throw new CborException("invalid tagging on type");
+        /// <summary>
+        /// The on string.
+        /// </summary>
+        /// <param name="value">
+        /// The value.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnString(string value)
+        {
+            if (this.currentTag != 0)
+            {
+                throw new CborException("invalid tagging on type");
+            }
 
-            if (Debug) { logger.info("double: {0}", value); }
-
-            OnObject(value);
+            this.OnObject(value);
         }
+
+        /// <summary>
+        /// The on tag.
+        /// </summary>
+        /// <param name="tag">
+        /// The tag.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void OnTag(uint tag)
+        {
+            if (this.currentTag != 0)
+            {
+                throw new CborException("invalid tagging on type");
+            }
+
+            this.currentTag = tag;
+        }
+
+        /// <summary>
+        /// The result.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="object"/>.
+        /// </returns>
+        public abstract object Result();
+
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// The on compete.
+        /// </summary>
+        protected void OnCompete()
+        {
+            this.CompleteEvent();
+        }
+
+        /// <summary>
+        /// The inner type reader on complete event.
+        /// </summary>
+        private void InnerTypeReaderOnCompleteEvent()
+        {
+            this.reader.Listener = this;
+            this.OnObject(this.innerTypeReader.Result());
+            this.innerTypeReader = null;
+        }
+
+        #endregion
     }
 }

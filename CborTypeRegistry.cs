@@ -1,129 +1,313 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Data.Odbc;
-using System.Linq;
-using System.Reflection;
-using Assets.DiverseWorlds.Cbor.Attribute;
-using Assets.DiverseWorlds.Cbor.Exception;
+﻿// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="CborTypeRegistry.cs" company="">
+//   
+// </copyright>
+// <summary>
+//   The cbor property template.
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 
-namespace Assets.DiverseWorlds.Cbor {
+namespace Naphaso.Cbor
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Reflection;
 
-    public class CborPropertyTemplate {
+    using DiverseWorlds.Logic.Network.Cbor.Exception;
+
+    using Naphaso.Cbor.Attribute;
+
+    /// <summary>
+    /// The cbor property template.
+    /// </summary>
+    public class CborPropertyTemplate
+    {
+        #region Fields
+
+        /// <summary>
+        /// The name.
+        /// </summary>
         public string name;
+
+        /// <summary>
+        /// The property.
+        /// </summary>
         public PropertyInfo property;
 
-
+        #endregion
     }
 
-    public class CborTypeTemplate {
+    /// <summary>
+    /// The cbor type template.
+    /// </summary>
+    public class CborTypeTemplate
+    {
+        #region Fields
+
+        /// <summary>
+        /// The properties.
+        /// </summary>
         public CborPropertyTemplate[] properties;
+
+        /// <summary>
+        /// The properties by name.
+        /// </summary>
         public Dictionary<string, CborPropertyTemplate> propertiesByName;
+
+        /// <summary>
+        /// The tag.
+        /// </summary>
         public uint tag;
+
+        /// <summary>
+        /// The type.
+        /// </summary>
         public Type type;
 
-        public void SetValue(object obj, string property, object value) {
-            if(property == null) {
+        #endregion
+
+        #region Public Methods and Operators
+
+        /// <summary>
+        /// The get property type.
+        /// </summary>
+        /// <param name="property">
+        /// The property.
+        /// </param>
+        /// <returns>
+        /// The <see cref="Type"/>.
+        /// </returns>
+        public Type GetPropertyType(string property)
+        {
+            return this.propertiesByName[property].property.PropertyType;
+        }
+
+        /// <summary>
+        /// The set value.
+        /// </summary>
+        /// <param name="obj">
+        /// The obj.
+        /// </param>
+        /// <param name="property">
+        /// The property.
+        /// </param>
+        /// <param name="value">
+        /// The value.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public void SetValue(object obj, string property, object value)
+        {
+            if (property == null)
+            {
                 throw new CborException("invalid object representation");
             }
 
-            
-
             CborPropertyTemplate propertyTemplate;
-            if(!propertiesByName.TryGetValue(property, out propertyTemplate)) {
-                throw new CborException("type " + type.Name + " not contains property " + property);
+            if (!this.propertiesByName.TryGetValue(property, out propertyTemplate))
+            {
+                throw new CborException("type " + this.type.Name + " not contains property " + property);
             }
 
             Type ptype = propertyTemplate.property.PropertyType;
-            //bool nullable = false;
-            if (ptype.IsGenericType && ptype.GetGenericTypeDefinition() == typeof (Nullable<>)) {
+
+            // bool nullable = false;
+            if (ptype.IsGenericType && ptype.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
                 ptype = ptype.GetGenericArguments()[0];
             }
 
-            if (value is int){
-                if(ptype == typeof (UInt64)) { // TODO: fix typecasts
+            if (value is int)
+            {
+                if (ptype == typeof(UInt64))
+                {
+                    // TODO: fix typecasts
                     propertyTemplate.property.SetValue(obj, (ulong)(int)value, null);
                     return;
                 }
 
-                if (ptype.IsEnum) {
-                    propertyTemplate.property.SetValue(obj, Enum.ToObject(ptype, value), null); 
+                if (ptype.IsEnum)
+                {
+                    propertyTemplate.property.SetValue(obj, Enum.ToObject(ptype, value), null);
 
                     return;
                 }
             }
 
-            /*if (value is IList && propertyTemplate.property.PropertyType.IsArray) {
-                IList list = value as IList;
-                Array array = (Array) Activator.CreateInstance(propertyTemplate.property.PropertyType.GetElementType(),
-                    list.Count);
-                for (int i = 0; i < list.Count; i++) {
-                    array.SetValue(list[i], i);
-                }
-                propertyTemplate.property.SetValue(obj, array, null);
-                return;
-            }*/
-
             propertyTemplate.property.SetValue(obj, value, null);
         }
 
-        public Type GetPropertyType(string property) {
-            return propertiesByName[property].property.PropertyType;
-        }
+        #endregion
     }
 
-    public class CborTypeRegistry {
+    /// <summary>
+    /// The cbor type registry.
+    /// </summary>
+    public class CborTypeRegistry
+    {
+        #region Static Fields
+
+        /// <summary>
+        /// The instance.
+        /// </summary>
         public static readonly CborTypeRegistry Instance = new CborTypeRegistry();
 
+        /// <summary>
+        /// The namespaces.
+        /// </summary>
+        private static readonly string[] namespaces = { "DiverseWorlds.Logic.Network.Model" };
+
+        #endregion
+
+        #region Fields
+
+        /// <summary>
+        /// The _tags.
+        /// </summary>
         private readonly Dictionary<uint, CborTypeTemplate> _tags = new Dictionary<uint, CborTypeTemplate>();
+
+        /// <summary>
+        /// The _types.
+        /// </summary>
         private readonly Dictionary<Type, CborTypeTemplate> _types = new Dictionary<Type, CborTypeTemplate>();
 
-        private CborTypeRegistry() {
-            ProcessModels();
+        #endregion
+
+        #region Constructors and Destructors
+
+        /// <summary>
+        /// Prevents a default instance of the <see cref="CborTypeRegistry"/> class from being created.
+        /// </summary>
+        private CborTypeRegistry()
+        {
+            this.ProcessModels();
         }
 
-        public CborTypeTemplate GetTemplate(uint tag) {
+        #endregion
+
+        #region Public Methods and Operators
+
+        /// <summary>
+        /// The get template.
+        /// </summary>
+        /// <param name="tag">
+        /// The tag.
+        /// </param>
+        /// <returns>
+        /// The <see cref="CborTypeTemplate"/>.
+        /// </returns>
+        public CborTypeTemplate GetTemplate(uint tag)
+        {
             CborTypeTemplate template;
-            return _tags.TryGetValue(tag, out template) ? template : null;
+            return this._tags.TryGetValue(tag, out template) ? template : null;
         }
 
-        public CborTypeTemplate GetTemplate(Type type) {
+        /// <summary>
+        /// The get template.
+        /// </summary>
+        /// <param name="type">
+        /// The type.
+        /// </param>
+        /// <returns>
+        /// The <see cref="CborTypeTemplate"/>.
+        /// </returns>
+        public CborTypeTemplate GetTemplate(Type type)
+        {
             CborTypeTemplate template;
-            return _types.TryGetValue(type, out template) ? template : null;
+            return this._types.TryGetValue(type, out template) ? template : null;
         }
 
-        private void ProcessModels() {
-            foreach(var modelType in from type in Assembly.GetExecutingAssembly().GetTypes()
-                                     where type.Namespace != null && type.Namespace.Equals("TestServer.Model", StringComparison.Ordinal)
-                                     select type) {
-                var objectAttribute = System.Attribute.GetCustomAttribute(modelType, typeof(CborObject));
-                if(!(objectAttribute is CborObject)) {
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// The get types in namespace.
+        /// </summary>
+        /// <param name="assembly">
+        /// The assembly.
+        /// </param>
+        /// <param name="ns">
+        /// The ns.
+        /// </param>
+        /// <returns>
+        /// The <see cref="IEnumerable"/>.
+        /// </returns>
+        private IEnumerable<Type> GetTypesInNamespace(Assembly assembly, string ns)
+        {
+            return assembly.GetTypes().Where(t => ns.Equals(t.Namespace, StringComparison.Ordinal));
+        }
+
+        /// <summary>
+        /// The process models.
+        /// </summary>
+        private void ProcessModels()
+        {
+            foreach (
+                Type modelType in
+                    from type in Assembly.GetExecutingAssembly().GetTypes() where this.TypeCheck(type) select type)
+            {
+                System.Attribute objectAttribute = System.Attribute.GetCustomAttribute(modelType, typeof(CborObject));
+                if (!(objectAttribute is CborObject))
+                {
                     continue;
                 }
 
-                var attr = (CborObject) objectAttribute;
-                var template = new CborTypeTemplate {tag = attr.Tag, type = modelType, propertiesByName = new Dictionary<string, CborPropertyTemplate>()};
-                var props = modelType.GetProperties();
+                var attr = (CborObject)objectAttribute;
+                var template = new CborTypeTemplate
+                                   {
+                                       tag = attr.Tag, 
+                                       type = modelType, 
+                                       propertiesByName = new Dictionary<string, CborPropertyTemplate>()
+                                   };
+                PropertyInfo[] props = modelType.GetProperties();
                 var propertyTemplatesList = new List<CborPropertyTemplate>();
-                foreach(var propertyTemplate in
-                    from propertyInfo in props
-                    let fieldAttribute = System.Attribute.GetCustomAttribute(propertyInfo, typeof(CborField))
-                    where fieldAttribute is CborField
-                    let fieldAttr = (CborField) fieldAttribute
-                    select new CborPropertyTemplate {name = fieldAttr.Name, property = propertyInfo}) {
-                    propertyTemplatesList.Add(propertyTemplate);
-                    template.propertiesByName.Add(propertyTemplate.name, propertyTemplate);
+
+                foreach (PropertyInfo propertyInfo in props)
+                {
+                    var attr1 = (CborField)System.Attribute.GetCustomAttribute(propertyInfo, typeof(CborField));
+                    if (attr1 != null)
+                    {
+                        var propertyTemplate = new CborPropertyTemplate { name = attr1.Name, property = propertyInfo };
+                        propertyTemplatesList.Add(propertyTemplate);
+                        template.propertiesByName.Add(propertyTemplate.name, propertyTemplate);
+                    }
                 }
 
                 template.properties = propertyTemplatesList.ToArray();
 
-                _tags.Add(template.tag, template);
-                _types.Add(template.type, template);
+                this._tags.Add(template.tag, template);
+                this._types.Add(template.type, template);
             }
         }
 
-        private IEnumerable<Type> GetTypesInNamespace(Assembly assembly, string ns) {
-            return assembly.GetTypes().Where(t => ns.Equals(t.Namespace, StringComparison.Ordinal));
+        /// <summary>
+        /// The type check.
+        /// </summary>
+        /// <param name="type">
+        /// The type.
+        /// </param>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        private bool TypeCheck(Type type)
+        {
+            if (type == null || type.Namespace == null)
+            {
+                return false;
+            }
+
+            // foreach (var ns in namespaces) {
+            if ("DiverseWorlds.Logic.Network.Model".Equals(type.Namespace, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            // }
+            return false;
         }
+
+        #endregion
     }
 }

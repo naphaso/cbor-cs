@@ -1,178 +1,212 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using System.Runtime.Serialization;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading;
-using Assets.DiverseWorlds.Cbor;
-using Assets.DiverseWorlds.Cbor.Buffer;
-using Assets.DiverseWorlds.Cbor.Exception;
-using Assets.DiverseWorlds.Cbor.Parser;
-using DiverseWorlds.Cbor;
-using Telegram.Core.Logging;
-using TestServer.Cbor;
+﻿// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="CborSerializer.cs" company="">
+//   
+// </copyright>
+// <summary>
+//   The cbor serializer.
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 
-namespace DiverseWorlds.Cbor {
-    /*
-    public interface CborSerializer {
-        void Serialize(object obj, CborWriter writer);
-    }
+namespace Naphaso.Cbor
+{
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.IO;
 
-    public abstract class CborAbstractSerializer<T> : CborSerializer {
-        protected abstract void Serialize(T obj, CborWriter writer);
-        public void Serialize(object obj, CborWriter writer) {
-            Serialize((T)obj, writer);
-        }
-    }
+    using DiverseWorlds.Logic.Network.Cbor.Exception;
 
-    public class CborStringSerializer : CborAbstractSerializer<string> {
+    /// <summary>
+    /// The cbor serializer.
+    /// </summary>
+    public class CborSerializer
+    {
+        #region Public Methods and Operators
 
-        protected override void Serialize(string obj, CborWriter writer) {
-            writer.Write(obj);
-        }
-    }
-
-    public class CborMapSerializer: CborAbstractSerializer<> {
-        protected void Serialize<K, V>(Dictionary<K, V> obj, CborWriter writer) {
-            
-        }
-    }*/
-
-
-    
-
-    public class CborSerializer {
-        private static readonly Logger logger = LoggerFactory.getLogger(typeof (CborSerializer));
-
-        public static byte[] Serialize(object obj) {
-            using(MemoryStream memory = new MemoryStream()) {
+        /// <summary>
+        /// The serialize.
+        /// </summary>
+        /// <param name="obj">
+        /// The obj.
+        /// </param>
+        /// <returns>
+        /// The <see cref="byte[]"/>.
+        /// </returns>
+        public static byte[] Serialize(object obj)
+        {
+            using (var memory = new MemoryStream())
+            {
                 WriteObjectToStream(obj, memory);
                 return memory.ToArray();
             }
         }
-        public static void WriteObjectToStream(object obj, Stream output) {
-            //logger.debug("write object to stream");
-            CborTypeTemplate template = CborTypeRegistry.Instance.GetTemplate(obj.GetType());
-            if(template == null) {
-                throw new CborException("unknown object type to serialization");
-            }
 
-            using(CborWriter writer = new CborWriter(output)) {
-                WriteObjectWithTemplate(obj, template, writer);
+        /// <summary>
+        /// The write list.
+        /// </summary>
+        /// <param name="list">
+        /// The list.
+        /// </param>
+        /// <param name="writer">
+        /// The writer.
+        /// </param>
+        /// <typeparam name="T">
+        /// </typeparam>
+        public static void WriteList<T>(List<T> list, CborWriter writer)
+        {
+            writer.WriteArray(list.Count);
+            foreach (T element in list)
+            {
+                WriteObject(element, writer);
             }
         }
 
-        public static void WriteTemplateObject(object obj, CborWriter writer) {
-            CborTypeTemplate template = CborTypeRegistry.Instance.GetTemplate(obj.GetType());
-            if (template == null) {
-                throw new CborException("unknown object type to serialization: " + obj.GetType());
-            }
+        /// <summary>
+        /// The write map.
+        /// </summary>
+        /// <param name="dictionary">
+        /// The dictionary.
+        /// </param>
+        /// <param name="writer">
+        /// The writer.
+        /// </param>
+        /// <typeparam name="K">
+        /// </typeparam>
+        /// <typeparam name="V">
+        /// </typeparam>
+        public static void WriteMap<K, V>(Dictionary<K, V> dictionary, CborWriter writer)
+        {
+            writer.WriteMap(dictionary.Count);
 
-            WriteObjectWithTemplate(obj, template, writer);
+            foreach (var v in dictionary)
+            {
+                WriteObject(v.Key, writer);
+                WriteObject(v.Value, writer);
+            }
         }
 
-        public static void WriteObject(object obj, CborWriter writer) {
-            //logger.debug("write some object: {0}", obj);
-
-            if (obj == null) {
+        /// <summary>
+        /// The write object.
+        /// </summary>
+        /// <param name="obj">
+        /// The obj.
+        /// </param>
+        /// <param name="writer">
+        /// The writer.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public static void WriteObject(object obj, CborWriter writer)
+        {
+            // logger.debug("write some object: {0}", obj);
+            if (obj == null)
+            {
                 writer.writeSpecial(22);
                 return;
             }
 
-            byte[] objBytes = obj as byte[];
-            if (objBytes != null) {
+            var objBytes = obj as byte[];
+            if (objBytes != null)
+            {
                 writer.Write(objBytes);
                 return;
             }
 
-            Array objArray = obj as Array;
-            if (objArray != null) {
+            var objArray = obj as Array;
+            if (objArray != null)
+            {
                 writer.WriteArray(objArray.Length);
-                foreach (var element in objArray) {
+                foreach (object element in objArray)
+                {
                     WriteObject(element, writer);
                 }
+
                 return;
             }
 
-            string objString = obj as string;
-            if(objString != null) {
+            var objString = obj as string;
+            if (objString != null)
+            {
                 writer.Write(objString);
                 return;
             }
 
-            if(obj is bool) {
+            if (obj is bool)
+            {
                 writer.writeSpecial((bool)obj ? 21u : 20u);
                 return;
             }
 
-            if (obj is uint) {
-                writer.Write((uint) obj);
+            if (obj is uint)
+            {
+                writer.Write((uint)obj);
                 return;
             }
 
-            if(obj is int || obj.GetType().IsEnum) {
+            if (obj is int || obj.GetType().IsEnum)
+            {
                 writer.Write((int)obj);
                 return;
             }
 
-            if (obj is ulong) {
+            if (obj is ulong)
+            {
                 writer.Write((ulong)obj);
                 return;
             }
 
-            if(obj is long) {
+            if (obj is long)
+            {
                 writer.Write((long)obj);
                 return;
             }
 
-            if (obj is double) {
+            if (obj is double)
+            {
                 writer.Write((double)obj);
                 return;
             }
 
-            if (obj is DateTime) {
+            if (obj is DateTime)
+            {
                 writer.WriteTag(1);
                 writer.Write(((DateTime)obj).GetUnixTimestampSeconds());
                 return;
             }
 
-
-
-            IDictionary objDict = obj as IDictionary;
-            if(objDict != null) {
+            var objDict = obj as IDictionary;
+            if (objDict != null)
+            {
                 writer.WriteMap(objDict.Count);
-                foreach (DictionaryEntry entry in objDict) {
+                foreach (DictionaryEntry entry in objDict)
+                {
                     WriteObject(entry.Key, writer);
                     WriteObject(entry.Value, writer);
                 }
+
                 return;
             }
 
-
-
-            IList objList = obj as IList;
-            if(objList != null) {
+            var objList = obj as IList;
+            if (objList != null)
+            {
                 writer.WriteArray(objList.Count);
-                foreach (var element in objList) {
+                foreach (object element in objList)
+                {
                     WriteObject(obj, writer);
                 }
+
                 return;
             }
 
-
-
             CborTypeTemplate template = CborTypeRegistry.Instance.GetTemplate(obj.GetType());
-            if (template == null) {
+            if (template == null)
+            {
                 throw new CborException("unknown object type to serialization: " + obj.GetType());
             }
 
             WriteObjectWithTemplate(obj, template, writer);
-            
+
             /*
 
             if (type == typeof(string)) {
@@ -197,7 +231,7 @@ namespace DiverseWorlds.Cbor {
                     WriteObjectWithType(obj, obj.GetType(), writer);
                 }
             */
-                /* } else if(type.IsGenericType) {
+            /* } else if(type.IsGenericType) {
                 Type genericType = type.GetGenericTypeDefinition();
                 if(typeof(Dictionary<,>).IsAssignableFrom(genericType)) {
                     //Debug.Log("writing map: " + obj + ", generic arguments: " + genericType.GetGenericArguments()[0].get() + ", " + genericType.GetGenericArguments()[1].GetElementType());
@@ -207,7 +241,7 @@ namespace DiverseWorlds.Cbor {
                     Debug.Log("writing list: " + obj);
                     typeof(CborSerializer).GetMethod("WriteList").MakeGenericMethod(genericType.GetGenericArguments()).Invoke(null, new[] {obj, writer});
                 }
-             *//*
+             */ /*
             } else {
                 CborTypeTemplate template = CborTypeRegistry.Instance.GetTemplate(type);
                 if (template == null) {
@@ -218,42 +252,89 @@ namespace DiverseWorlds.Cbor {
             }*/
         }
 
+        /// <summary>
+        /// The write object to stream.
+        /// </summary>
+        /// <param name="obj">
+        /// The obj.
+        /// </param>
+        /// <param name="output">
+        /// The output.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public static void WriteObjectToStream(object obj, Stream output)
+        {
+            // logger.debug("write object to stream");
+            CborTypeTemplate template = CborTypeRegistry.Instance.GetTemplate(obj.GetType());
+            if (template == null)
+            {
+                throw new CborException("unknown object type to serialization");
+            }
 
-        private static void WriteObjectWithTemplate(object obj, CborTypeTemplate template, CborWriter writer) {
-            //logger.debug("write object with template: {0}", obj);
+            using (var writer = new CborWriter(output))
+            {
+                WriteObjectWithTemplate(obj, template, writer);
+            }
+        }
+
+        /// <summary>
+        /// The write template object.
+        /// </summary>
+        /// <param name="obj">
+        /// The obj.
+        /// </param>
+        /// <param name="writer">
+        /// The writer.
+        /// </param>
+        /// <exception cref="CborException">
+        /// </exception>
+        public static void WriteTemplateObject(object obj, CborWriter writer)
+        {
+            CborTypeTemplate template = CborTypeRegistry.Instance.GetTemplate(obj.GetType());
+            if (template == null)
+            {
+                throw new CborException("unknown object type to serialization: " + obj.GetType());
+            }
+
+            WriteObjectWithTemplate(obj, template, writer);
+        }
+
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// The write object with template.
+        /// </summary>
+        /// <param name="obj">
+        /// The obj.
+        /// </param>
+        /// <param name="template">
+        /// The template.
+        /// </param>
+        /// <param name="writer">
+        /// The writer.
+        /// </param>
+        private static void WriteObjectWithTemplate(object obj, CborTypeTemplate template, CborWriter writer)
+        {
+            // logger.debug("write object with template: {0}", obj);
             writer.WriteTag(template.tag);
             writer.WriteMap(template.properties.Length);
-            //logger.info("writing object with {0} fields", template.properties.Length);
-            foreach (var propertyTemplate in template.properties) {
-                //logger.info("writing property name {0} value {1}", propertyTemplate.name, propertyTemplate.property.GetValue(obj,null));
+
+            // logger.info("writing object with {0} fields", template.properties.Length);
+            foreach (CborPropertyTemplate propertyTemplate in template.properties)
+            {
+                // logger.info("writing property name {0} value {1}", propertyTemplate.name, propertyTemplate.property.GetValue(obj,null));
                 writer.Write(propertyTemplate.name);
                 WriteObject(propertyTemplate.property.GetValue(obj, null), writer);
             }
         }
 
-        public static void WriteMap<K, V>(Dictionary<K, V> dictionary, CborWriter writer) {
-            writer.WriteMap(dictionary.Count);
-
-            foreach(var v in dictionary) {
-                WriteObject(v.Key, writer);
-                WriteObject(v.Value, writer);
-            }
-        }
-
-        public static void WriteList<T>(List<T> list, CborWriter writer) {
-            writer.WriteArray(list.Count);
-            foreach(var element in list) {
-                WriteObject(element, writer);
-            }
-        }
-
-        
-        
-
+        #endregion
     }
 
     // deserialization
-
 
     /*
     public class CborListReader : CborTypeReader {
@@ -564,6 +645,4 @@ namespace DiverseWorlds.Cbor {
             }
         }
     }*/
-
-
 }

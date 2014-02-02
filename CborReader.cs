@@ -1,360 +1,194 @@
-﻿using System;
-using System.Text;
-using Assets.DiverseWorlds.Cbor.Buffer;
-using Assets.DiverseWorlds.Cbor.Exception;
-using Telegram.Core.Logging;
+﻿// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="CborReader.cs" company="">
+//   
+// </copyright>
+// <summary>
+//   The cbor reader state.
+// </summary>
+// --------------------------------------------------------------------------------------------------------------------
 
-namespace Assets.DiverseWorlds.Cbor {
-    internal enum CborReaderState {
-        Type,
-        Pint,
-        Nint,
-        BytesSize,
-        BytesData,
-        StringSize,
-        StringData,
-        Array,
-        Map,
-        Tag,
-        Special,
+namespace Naphaso.Cbor
+{
+    using System;
+    using System.Text;
 
-        FloatData,
+    using DiverseWorlds.Logic.Network.Cbor.Exception;
+
+    using Naphaso.Cbor.Buffer;
+
+    /// <summary>
+    /// The cbor reader state.
+    /// </summary>
+    internal enum CborReaderState
+    {
+        /// <summary>
+        /// The type.
+        /// </summary>
+        Type, 
+
+        /// <summary>
+        /// The pint.
+        /// </summary>
+        Pint, 
+
+        /// <summary>
+        /// The nint.
+        /// </summary>
+        Nint, 
+
+        /// <summary>
+        /// The bytes size.
+        /// </summary>
+        BytesSize, 
+
+        /// <summary>
+        /// The bytes data.
+        /// </summary>
+        BytesData, 
+
+        /// <summary>
+        /// The string size.
+        /// </summary>
+        StringSize, 
+
+        /// <summary>
+        /// The string data.
+        /// </summary>
+        StringData, 
+
+        /// <summary>
+        /// The array.
+        /// </summary>
+        Array, 
+
+        /// <summary>
+        /// The map.
+        /// </summary>
+        Map, 
+
+        /// <summary>
+        /// The tag.
+        /// </summary>
+        Tag, 
+
+        /// <summary>
+        /// The special.
+        /// </summary>
+        Special, 
+
+        /// <summary>
+        /// The float data.
+        /// </summary>
+        FloatData, 
     }
 
-    public class CborReader {
-        private static readonly Logger logger = LoggerFactory.getLogger(typeof(CborReader));
+    /// <summary>
+    /// The cbor reader.
+    /// </summary>
+    public class CborReader
+    {
+        #region Fields
 
+        /// <summary>
+        /// The _input.
+        /// </summary>
         private readonly CborInput _input;
+
+        /// <summary>
+        /// The _listener.
+        /// </summary>
         private CborReaderListener _listener;
+
+        /// <summary>
+        /// The _size.
+        /// </summary>
         private int _size; // current element size in bytes
+
+        /// <summary>
+        /// The _state.
+        /// </summary>
         private CborReaderState _state;
 
-        public CborReader(CborInput input) {
-            _input = input;
-            //_listener = listener;
+        #endregion
 
-            _input.InputEvent += InputOnInputEvent;
-            //InputOnInputEvent();
+        #region Constructors and Destructors
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CborReader"/> class.
+        /// </summary>
+        /// <param name="input">
+        /// The input.
+        /// </param>
+        public CborReader(CborInput input)
+        {
+            this._input = input;
+
+            // _listener = listener;
+            this._input.InputEvent += this.InputOnInputEvent;
+
+            // InputOnInputEvent();
         }
 
-        public CborReaderListener Listener {
-            get { return _listener; }
-            set { _listener = value; }
+        #endregion
+
+        #region Public Properties
+
+        /// <summary>
+        /// Gets or sets the listener.
+        /// </summary>
+        public CborReaderListener Listener
+        {
+            get
+            {
+                return this._listener;
+            }
+
+            set
+            {
+                this._listener = value;
+            }
         }
 
-        private void InputOnInputEvent() {
-            while(TryStep()) {
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// The input on input event.
+        /// </summary>
+        private void InputOnInputEvent()
+        {
+            while (this.TryStep())
+            {
                 // parsing step
             }
         }
 
-        private bool TryStep() {
-            switch(_state) {
-                case CborReaderState.Type:
-                    return TryParseType();
-                case CborReaderState.Pint:
-                    return TryParsePint();
-                case CborReaderState.Nint:
-                    return TryParseNint();
-                case CborReaderState.BytesSize:
-                    return TryParseBytesSize();
-                case CborReaderState.BytesData:
-                    return TryParseBytesData();
-                case CborReaderState.StringSize:
-                    return TryParseStringSize();
-                case CborReaderState.StringData:
-                    return TryParseStringData();
-                case CborReaderState.Array:
-                    return TryParseArray();
-                case CborReaderState.Map:
-                    return TryParseMap();
-                case CborReaderState.Tag:
-                    return TryParseTag();
-                case CborReaderState.Special:
-                    return TryParseSpecial();
-
-                case CborReaderState.FloatData:
-                    return TryParseFloat();
-                default:
-                    return false;
-            }
-        }
-
-
-
-        private bool TryParseType() {
-            if(!_input.HasBytes(1)) {
+        /// <summary>
+        /// The try parse array.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseArray()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
                 return false;
             }
 
-            int type = _input.GetByte();
-            int majorType = type >> 5;
-            int minorType = type & 31;
-
-            switch(majorType) {
-                case 0: // positive integer
-                    if(minorType < 24) {
-                        _listener.OnInteger((uint) minorType, 1);
-                    } else if(minorType == 24) {
-                        _state = CborReaderState.Pint;
-                        _size = 1;
-                    } else if(minorType == 25) {
-                        _state = CborReaderState.Pint;
-                        _size = 2;
-                    } else if(minorType == 26) {
-                        _state = CborReaderState.Pint;
-                        _size = 4;
-                    } else if(minorType == 27) {
-                        _state = CborReaderState.Pint;
-                        _size = 8;
-                    } else {
-                        throw new CborException("invalid positive integer constructor");
-                    }
-                    break;
-                case 1: // negative integer
-                    if(minorType < 24) {
-                        _listener.OnInteger((uint) minorType, -1);
-                    } else if(minorType == 24) {
-                        _state = CborReaderState.Nint;
-                        _size = 1;
-                    } else if(minorType == 25) {
-                        _state = CborReaderState.Nint;
-                        _size = 2;
-                    } else if(minorType == 26) {
-                        _state = CborReaderState.Nint;
-                        _size = 4;
-                    } else if(minorType == 27) {
-                        _state = CborReaderState.Nint;
-                        _size = 8;
-                    } else {
-                        throw new CborException("invalid negative integer constructor");
-                    }
-                    break;
-                case 2: // bytes
-                    if(minorType < 24) {
-                        _state = CborReaderState.BytesData;
-                        _size = minorType;
-                    } else if(minorType == 24) {
-                        _state = CborReaderState.BytesSize;
-                        _size = 1;
-                    } else if(minorType == 25) {
-                        _state = CborReaderState.BytesSize;
-                        _size = 2;
-                    } else if(minorType == 26) {
-                        _state = CborReaderState.BytesSize;
-                        _size = 4;
-                    } else if(minorType == 27) {
-                        _state = CborReaderState.BytesSize;
-                        _size = 8;
-                    } else {
-                        throw new CborException("invalid bytes constructor");
-                    }
-                    break;
-                case 3: // string
-                    if(minorType < 24) {
-                        _state = CborReaderState.StringData;
-                        _size = minorType;
-                    } else if(minorType == 24) {
-                        _state = CborReaderState.StringSize;
-                        _size = 1;
-                    } else if(minorType == 25) {
-                        _state = CborReaderState.StringSize;
-                        _size = 2;
-                    } else if(minorType == 26) {
-                        _state = CborReaderState.StringSize;
-                        _size = 4;
-                    } else if(minorType == 27) {
-                        _state = CborReaderState.StringSize;
-                        _size = 8;
-                    } else {
-                        throw new CborException("invalid string constructor");
-                    }
-                    break;
-                case 4: // array
-                    if(minorType < 24) {
-                        _listener.OnArray(minorType);
-                    } else if(minorType == 24) {
-                        _state = CborReaderState.Array;
-                        _size = 1;
-                    } else if(minorType == 25) {
-                        _state = CborReaderState.Array;
-                        _size = 2;
-                    } else if(minorType == 26) {
-                        _state = CborReaderState.Array;
-                        _size = 4;
-                    } else if(minorType == 27) {
-                        _state = CborReaderState.Array;
-                        _size = 8;
-                    } else {
-                        throw new CborException("invalid array constructor");
-                    }
-                    break;
-                case 5: // map
-                    if(minorType < 24) {
-                        _listener.OnMap(minorType);
-                    } else if(minorType == 24) {
-                        _state = CborReaderState.Map;
-                        _size = 1;
-                    } else if(minorType == 25) {
-                        _state = CborReaderState.Map;
-                        _size = 2;
-                    } else if(minorType == 26) {
-                        _state = CborReaderState.Map;
-                        _size = 4;
-                    } else if(minorType == 27) {
-                        _state = CborReaderState.Map;
-                        _size = 8;
-                    } else {
-                        throw new CborException("invalid map constructor");
-                    }
-                    break;
-                case 6: // tag
-                    if(minorType < 24) {
-                        _listener.OnTag((uint) minorType);
-                    } else if(minorType == 24) {
-                        _state = CborReaderState.Tag;
-                        _size = 1;
-                    } else if(minorType == 25) {
-                        _state = CborReaderState.Tag;
-                        _size = 2;
-                    } else if(minorType == 26) {
-                        _state = CborReaderState.Tag;
-                        _size = 4;
-                    } else if(minorType == 27) {
-                        _state = CborReaderState.Tag;
-                        _size = 8;
-                    } else {
-                        throw new CborException("invalid map constructor");
-                    }
-                    break;
-                case 7: // special
-                    if(minorType < 24) {
-                        _listener.OnSpecial((uint) minorType);
-                    } else if(minorType == 24) {
-                        _state = CborReaderState.Special;
-                        _size = 1;
-                    } else if(minorType == 25) {
-                        _state = CborReaderState.Special;
-                        _size = 2;
-                    } else if(minorType == 26) {
-                        _state = CborReaderState.Special;
-                        _size = 4;
-                    } else if(minorType == 27) {
-                        _state = CborReaderState.Special;
-                        _size = 8;
-                    } else {
-                        throw new CborException("invalid map constructor");
-                    }
-                    break;
-            }
-
-            return true;
-        }
-
-        private bool TryParseTag() {
-            if(!_input.HasBytes(_size)) {
-                return false;
-            }
-
-            switch(_size) {
+            switch (this._size)
+            {
                 case 1:
-                    _listener.OnTag(_input.GetInt8());
+                    this._listener.OnArray((int)this._input.GetInt8());
                     break;
                 case 2:
-                    _listener.OnTag(_input.GetInt16());
+                    this._listener.OnArray((int)this._input.GetInt16());
                     break;
                 case 4:
-                    _listener.OnTag(_input.GetInt32());
-                    break;
-                case 8:
-                    throw new CborException("8 bytes tags not supported");
-                default:
-                    throw new CborException("invalid tag size");
-            }
-
-            _state = CborReaderState.Type;
-
-            return true;
-        }
-
-        private bool TryParseSpecial() {
-            if(!_input.HasBytes(_size)) {
-                return false;
-            }
-
-            uint code;
-
-            switch(_size) {
-                case 1:
-                    code = _input.GetInt8();
-                    break;
-                case 2:
-                    code = _input.GetInt16();
-                    break;
-                case 4:
-                    code = _input.GetInt32();
-                    break;
-                case 8:
-                    throw new CborException("8 bytes special codes not supported");
-                default:
-                    throw new CborException("invalid special code size");
-            }
-
-            switch (code) {
-                case 27: // double
-                    _size = 8;
-                    _state = CborReaderState.FloatData;
-                    break;
-                default:
-                    _listener.OnSpecial(code);
-                    _state = CborReaderState.Type;
-                    break;
-            }
-
-
-            return true;
-        }
-
-        private bool TryParseMap() {
-            if(!_input.HasBytes(_size)) {
-                return false;
-            }
-
-            switch(_size) {
-                case 1:
-                    _listener.OnMap((int) _input.GetInt8());
-                    break;
-                case 2:
-                    _listener.OnMap((int) _input.GetInt16());
-                    break;
-                case 4:
-                    _listener.OnMap((int) _input.GetInt32());
-                    break;
-                case 8:
-                    throw new CborException("8 bytes maps not supported");
-                default:
-                    throw new CborException("invalid map size");
-            }
-
-            _state = CborReaderState.Type;
-
-            return true;
-        }
-
-        private bool TryParseArray() {
-            if(!_input.HasBytes(_size)) {
-                return false;
-            }
-
-            switch(_size) {
-                case 1:
-                    _listener.OnArray((int) _input.GetInt8());
-                    break;
-                case 2:
-                    _listener.OnArray((int) _input.GetInt16());
-                    break;
-                case 4:
-                    _listener.OnArray((int) _input.GetInt32());
+                    this._listener.OnArray((int)this._input.GetInt32());
                     break;
                 case 8:
                     throw new CborException("8 bytes arrays not supported");
@@ -362,71 +196,54 @@ namespace Assets.DiverseWorlds.Cbor {
                     throw new CborException("invalid array size");
             }
 
-            _state = CborReaderState.Type;
+            this._state = CborReaderState.Type;
 
             return true;
         }
 
-        private bool TryParseStringData() {
-            if(!_input.HasBytes(_size)) {
+        /// <summary>
+        /// The try parse bytes data.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        private bool TryParseBytesData()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
                 return false;
             }
 
-            _listener.OnString(Encoding.UTF8.GetString(_input.GetBytes(_size)));
-            _state = CborReaderState.Type;
+            this._listener.OnBytes(this._input.GetBytes(this._size));
+            this._state = CborReaderState.Type;
             return true;
         }
 
-        private bool TryParseStringSize() {
-            if(!_input.HasBytes(_size)) {
+        /// <summary>
+        /// The try parse bytes size.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseBytesSize()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
                 return false;
             }
 
-            switch(_size) {
+            switch (this._size)
+            {
                 case 1:
-                    _size = (int) _input.GetInt8();
+                    this._size = (int)this._input.GetInt8();
                     break;
                 case 2:
-                    _size = (int) _input.GetInt16();
+                    this._size = (int)this._input.GetInt16();
                     break;
                 case 4:
-                    _size = (int) _input.GetInt32();
-                    break;
-                case 8:
-                    throw new CborException("8 bytes string size not supported");
-                default:
-                    throw new CborException("invalid string size");
-            }
-
-            _state = CborReaderState.StringData;
-
-            return true;
-        }
-
-        private bool TryParseBytesData() {
-            if(!_input.HasBytes(_size)) {
-                return false;
-            }
-
-            _listener.OnBytes(_input.GetBytes(_size));
-            _state = CborReaderState.Type;
-            return true;
-        }
-
-        private bool TryParseBytesSize() {
-            if(!_input.HasBytes(_size)) {
-                return false;
-            }
-
-            switch(_size) {
-                case 1:
-                    _size = (int) _input.GetInt8();
-                    break;
-                case 2:
-                    _size = (int) _input.GetInt16();
-                    break;
-                case 4:
-                    _size = (int) _input.GetInt32();
+                    this._size = (int)this._input.GetInt32();
                     break;
                 case 8:
                     throw new CborException("8 bytes bytes size not supported");
@@ -434,84 +251,613 @@ namespace Assets.DiverseWorlds.Cbor {
                     throw new CborException("invalid bytes size");
             }
 
-            _state = CborReaderState.BytesData;
+            this._state = CborReaderState.BytesData;
 
             return true;
         }
 
-        private bool TryParseNint() {
-            if(!_input.HasBytes(_size)) {
+        /// <summary>
+        /// The try parse float.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseFloat()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
                 return false;
             }
 
-            switch(_size) {
-                case 1:
-                    _listener.OnInteger(_input.GetInt8(), -1);
-                    break;
-                case 2:
-                    _listener.OnInteger(_input.GetInt16(), -1);
-                    break;
-                case 4:
-                    _listener.OnInteger(_input.GetInt32(), -1);
-                    break;
-                case 8:
-                    _listener.OnLong(_input.GetInt64(), -1);
-                    break;
-                default:
-                    throw new CborException("invalid negative integer size");
-            }
+            byte[] data = this._input.GetBytes(8);
 
-            _state = CborReaderState.Type;
-
-            return true;
-        }
-
-        private bool TryParsePint() {
-            if(!_input.HasBytes(_size)) {
-                return false;
-            }
-
-            switch(_size) {
-                case 1:
-                    _listener.OnInteger(_input.GetInt8(), 1);
-                    break;
-                case 2:
-                    _listener.OnInteger(_input.GetInt16(), 1);
-                    break;
-                case 4:
-                    _listener.OnInteger(_input.GetInt32(), 1);
-                    break;
-                case 8:
-                    _listener.OnLong(_input.GetInt64(), 1);
-                    break;
-                default:
-                    throw new CborException("invalid positive integer size");
-            }
-
-            _state = CborReaderState.Type;
-
-            return true;
-        }
-
-        private bool TryParseFloat() {
-            if (!_input.HasBytes(_size)) {
-                return false;
-            }
-
-            byte[] data = _input.GetBytes(8);
-            //logger.info("parse float: {0}", BitConverter.ToString(data).Replace("-","").ToLower());
-
-            switch (_size) {
-                case 8: //double
-                    _listener.OnDouble(BitConverter.ToDouble(data, 0));
+            // logger.info("parse float: {0}", BitConverter.ToString(data).Replace("-","").ToLower());
+            switch (this._size)
+            {
+                case 8: // double
+                    this._listener.OnDouble(BitConverter.ToDouble(data, 0));
                     break;
                 default:
                     throw new CborException("invalid float size");
             }
 
-            _state = CborReaderState.Type;
+            this._state = CborReaderState.Type;
 
             return true;
         }
+
+        /// <summary>
+        /// The try parse map.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseMap()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
+                return false;
+            }
+
+            switch (this._size)
+            {
+                case 1:
+                    this._listener.OnMap((int)this._input.GetInt8());
+                    break;
+                case 2:
+                    this._listener.OnMap((int)this._input.GetInt16());
+                    break;
+                case 4:
+                    this._listener.OnMap((int)this._input.GetInt32());
+                    break;
+                case 8:
+                    throw new CborException("8 bytes maps not supported");
+                default:
+                    throw new CborException("invalid map size");
+            }
+
+            this._state = CborReaderState.Type;
+
+            return true;
+        }
+
+        /// <summary>
+        /// The try parse nint.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseNint()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
+                return false;
+            }
+
+            switch (this._size)
+            {
+                case 1:
+                    this._listener.OnInteger(this._input.GetInt8(), -1);
+                    break;
+                case 2:
+                    this._listener.OnInteger(this._input.GetInt16(), -1);
+                    break;
+                case 4:
+                    this._listener.OnInteger(this._input.GetInt32(), -1);
+                    break;
+                case 8:
+                    this._listener.OnLong(this._input.GetInt64(), -1);
+                    break;
+                default:
+                    throw new CborException("invalid negative integer size");
+            }
+
+            this._state = CborReaderState.Type;
+
+            return true;
+        }
+
+        /// <summary>
+        /// The try parse pint.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParsePint()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
+                return false;
+            }
+
+            switch (this._size)
+            {
+                case 1:
+                    this._listener.OnInteger(this._input.GetInt8(), 1);
+                    break;
+                case 2:
+                    this._listener.OnInteger(this._input.GetInt16(), 1);
+                    break;
+                case 4:
+                    this._listener.OnInteger(this._input.GetInt32(), 1);
+                    break;
+                case 8:
+                    this._listener.OnLong(this._input.GetInt64(), 1);
+                    break;
+                default:
+                    throw new CborException("invalid positive integer size");
+            }
+
+            this._state = CborReaderState.Type;
+
+            return true;
+        }
+
+        /// <summary>
+        /// The try parse special.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseSpecial()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
+                return false;
+            }
+
+            uint code;
+
+            switch (this._size)
+            {
+                case 1:
+                    code = this._input.GetInt8();
+                    break;
+                case 2:
+                    code = this._input.GetInt16();
+                    break;
+                case 4:
+                    code = this._input.GetInt32();
+                    break;
+                case 8:
+                    throw new CborException("8 bytes special codes not supported");
+                default:
+                    throw new CborException("invalid special code size");
+            }
+
+            switch (code)
+            {
+                case 27: // double
+                    this._size = 8;
+                    this._state = CborReaderState.FloatData;
+                    break;
+                default:
+                    this._listener.OnSpecial(code);
+                    this._state = CborReaderState.Type;
+                    break;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The try parse string data.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        private bool TryParseStringData()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
+                return false;
+            }
+
+            this._listener.OnString(Encoding.UTF8.GetString(this._input.GetBytes(this._size)));
+            this._state = CborReaderState.Type;
+            return true;
+        }
+
+        /// <summary>
+        /// The try parse string size.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseStringSize()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
+                return false;
+            }
+
+            switch (this._size)
+            {
+                case 1:
+                    this._size = (int)this._input.GetInt8();
+                    break;
+                case 2:
+                    this._size = (int)this._input.GetInt16();
+                    break;
+                case 4:
+                    this._size = (int)this._input.GetInt32();
+                    break;
+                case 8:
+                    throw new CborException("8 bytes string size not supported");
+                default:
+                    throw new CborException("invalid string size");
+            }
+
+            this._state = CborReaderState.StringData;
+
+            return true;
+        }
+
+        /// <summary>
+        /// The try parse tag.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseTag()
+        {
+            if (!this._input.HasBytes(this._size))
+            {
+                return false;
+            }
+
+            switch (this._size)
+            {
+                case 1:
+                    this._listener.OnTag(this._input.GetInt8());
+                    break;
+                case 2:
+                    this._listener.OnTag(this._input.GetInt16());
+                    break;
+                case 4:
+                    this._listener.OnTag(this._input.GetInt32());
+                    break;
+                case 8:
+                    throw new CborException("8 bytes tags not supported");
+                default:
+                    throw new CborException("invalid tag size");
+            }
+
+            this._state = CborReaderState.Type;
+
+            return true;
+        }
+
+        /// <summary>
+        /// The try parse type.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        /// <exception cref="CborException">
+        /// </exception>
+        private bool TryParseType()
+        {
+            if (!this._input.HasBytes(1))
+            {
+                return false;
+            }
+
+            int type = this._input.GetByte();
+            int majorType = type >> 5;
+            int minorType = type & 31;
+
+            switch (majorType)
+            {
+                case 0: // positive integer
+                    if (minorType < 24)
+                    {
+                        this._listener.OnInteger((uint)minorType, 1);
+                    }
+                    else if (minorType == 24)
+                    {
+                        this._state = CborReaderState.Pint;
+                        this._size = 1;
+                    }
+                    else if (minorType == 25)
+                    {
+                        this._state = CborReaderState.Pint;
+                        this._size = 2;
+                    }
+                    else if (minorType == 26)
+                    {
+                        this._state = CborReaderState.Pint;
+                        this._size = 4;
+                    }
+                    else if (minorType == 27)
+                    {
+                        this._state = CborReaderState.Pint;
+                        this._size = 8;
+                    }
+                    else
+                    {
+                        throw new CborException("invalid positive integer constructor");
+                    }
+
+                    break;
+                case 1: // negative integer
+                    if (minorType < 24)
+                    {
+                        this._listener.OnInteger((uint)minorType, -1);
+                    }
+                    else if (minorType == 24)
+                    {
+                        this._state = CborReaderState.Nint;
+                        this._size = 1;
+                    }
+                    else if (minorType == 25)
+                    {
+                        this._state = CborReaderState.Nint;
+                        this._size = 2;
+                    }
+                    else if (minorType == 26)
+                    {
+                        this._state = CborReaderState.Nint;
+                        this._size = 4;
+                    }
+                    else if (minorType == 27)
+                    {
+                        this._state = CborReaderState.Nint;
+                        this._size = 8;
+                    }
+                    else
+                    {
+                        throw new CborException("invalid negative integer constructor");
+                    }
+
+                    break;
+                case 2: // bytes
+                    if (minorType < 24)
+                    {
+                        this._state = CborReaderState.BytesData;
+                        this._size = minorType;
+                    }
+                    else if (minorType == 24)
+                    {
+                        this._state = CborReaderState.BytesSize;
+                        this._size = 1;
+                    }
+                    else if (minorType == 25)
+                    {
+                        this._state = CborReaderState.BytesSize;
+                        this._size = 2;
+                    }
+                    else if (minorType == 26)
+                    {
+                        this._state = CborReaderState.BytesSize;
+                        this._size = 4;
+                    }
+                    else if (minorType == 27)
+                    {
+                        this._state = CborReaderState.BytesSize;
+                        this._size = 8;
+                    }
+                    else
+                    {
+                        throw new CborException("invalid bytes constructor");
+                    }
+
+                    break;
+                case 3: // string
+                    if (minorType < 24)
+                    {
+                        this._state = CborReaderState.StringData;
+                        this._size = minorType;
+                    }
+                    else if (minorType == 24)
+                    {
+                        this._state = CborReaderState.StringSize;
+                        this._size = 1;
+                    }
+                    else if (minorType == 25)
+                    {
+                        this._state = CborReaderState.StringSize;
+                        this._size = 2;
+                    }
+                    else if (minorType == 26)
+                    {
+                        this._state = CborReaderState.StringSize;
+                        this._size = 4;
+                    }
+                    else if (minorType == 27)
+                    {
+                        this._state = CborReaderState.StringSize;
+                        this._size = 8;
+                    }
+                    else
+                    {
+                        throw new CborException("invalid string constructor");
+                    }
+
+                    break;
+                case 4: // array
+                    if (minorType < 24)
+                    {
+                        this._listener.OnArray(minorType);
+                    }
+                    else if (minorType == 24)
+                    {
+                        this._state = CborReaderState.Array;
+                        this._size = 1;
+                    }
+                    else if (minorType == 25)
+                    {
+                        this._state = CborReaderState.Array;
+                        this._size = 2;
+                    }
+                    else if (minorType == 26)
+                    {
+                        this._state = CborReaderState.Array;
+                        this._size = 4;
+                    }
+                    else if (minorType == 27)
+                    {
+                        this._state = CborReaderState.Array;
+                        this._size = 8;
+                    }
+                    else
+                    {
+                        throw new CborException("invalid array constructor");
+                    }
+
+                    break;
+                case 5: // map
+                    if (minorType < 24)
+                    {
+                        this._listener.OnMap(minorType);
+                    }
+                    else if (minorType == 24)
+                    {
+                        this._state = CborReaderState.Map;
+                        this._size = 1;
+                    }
+                    else if (minorType == 25)
+                    {
+                        this._state = CborReaderState.Map;
+                        this._size = 2;
+                    }
+                    else if (minorType == 26)
+                    {
+                        this._state = CborReaderState.Map;
+                        this._size = 4;
+                    }
+                    else if (minorType == 27)
+                    {
+                        this._state = CborReaderState.Map;
+                        this._size = 8;
+                    }
+                    else
+                    {
+                        throw new CborException("invalid map constructor");
+                    }
+
+                    break;
+                case 6: // tag
+                    if (minorType < 24)
+                    {
+                        this._listener.OnTag((uint)minorType);
+                    }
+                    else if (minorType == 24)
+                    {
+                        this._state = CborReaderState.Tag;
+                        this._size = 1;
+                    }
+                    else if (minorType == 25)
+                    {
+                        this._state = CborReaderState.Tag;
+                        this._size = 2;
+                    }
+                    else if (minorType == 26)
+                    {
+                        this._state = CborReaderState.Tag;
+                        this._size = 4;
+                    }
+                    else if (minorType == 27)
+                    {
+                        this._state = CborReaderState.Tag;
+                        this._size = 8;
+                    }
+                    else
+                    {
+                        throw new CborException("invalid map constructor");
+                    }
+
+                    break;
+                case 7: // special
+                    if (minorType < 24)
+                    {
+                        this._listener.OnSpecial((uint)minorType);
+                    }
+                    else if (minorType == 24)
+                    {
+                        this._state = CborReaderState.Special;
+                        this._size = 1;
+                    }
+                    else if (minorType == 25)
+                    {
+                        this._state = CborReaderState.Special;
+                        this._size = 2;
+                    }
+                    else if (minorType == 26)
+                    {
+                        this._state = CborReaderState.Special;
+                        this._size = 4;
+                    }
+                    else if (minorType == 27)
+                    {
+                        this._state = CborReaderState.Special;
+                        this._size = 8;
+                    }
+                    else
+                    {
+                        throw new CborException("invalid map constructor");
+                    }
+
+                    break;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The try step.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="bool"/>.
+        /// </returns>
+        private bool TryStep()
+        {
+            switch (this._state)
+            {
+                case CborReaderState.Type:
+                    return this.TryParseType();
+                case CborReaderState.Pint:
+                    return this.TryParsePint();
+                case CborReaderState.Nint:
+                    return this.TryParseNint();
+                case CborReaderState.BytesSize:
+                    return this.TryParseBytesSize();
+                case CborReaderState.BytesData:
+                    return this.TryParseBytesData();
+                case CborReaderState.StringSize:
+                    return this.TryParseStringSize();
+                case CborReaderState.StringData:
+                    return this.TryParseStringData();
+                case CborReaderState.Array:
+                    return this.TryParseArray();
+                case CborReaderState.Map:
+                    return this.TryParseMap();
+                case CborReaderState.Tag:
+                    return this.TryParseTag();
+                case CborReaderState.Special:
+                    return this.TryParseSpecial();
+
+                case CborReaderState.FloatData:
+                    return this.TryParseFloat();
+                default:
+                    return false;
+            }
+        }
+
+        #endregion
     }
 }

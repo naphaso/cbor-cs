@@ -1,35 +1,78 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace TestServer.Cbor {
-    class Extensions {
+namespace Naphaso.Cbor
+{
+    /// <summary>
+    /// The date time extensions.
+    /// </summary>
+    internal static class DateTimeExtensions
+    {
+        /// <summary>
+        /// The unix epoch.
+        /// </summary>
+        private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
 
-    }
-
-    static class DateTimeExtensions {
-        private static readonly DateTime UnixEpoch =
-        new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).ToLocalTime();
-
-        public static long GetCurrentUnixTimestampMillis() {
+        /// <summary>
+        /// The get current unix timestamp in millis.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="long"/>.
+        /// </returns>
+        public static long GetCurrentUnixTimestampMillis()
+        {
             return (long)(DateTime.UtcNow - UnixEpoch).TotalMilliseconds;
         }
 
-        public static long GetUnixTimestampSeconds(this DateTime time) {
+        /// <summary>
+        /// The get unix timestamp in seconds.
+        /// </summary>
+        /// <param name="time">
+        /// The time.
+        /// </param>
+        /// <returns>
+        /// The <see cref="long"/>.
+        /// </returns>
+        public static long GetUnixTimestampSeconds(this DateTime time)
+        {
             return (long)(time - UnixEpoch).TotalSeconds;
         }
 
-        public static DateTime DateTimeFromUnixTimestampMillis(long millis) {
+        /// <summary>
+        /// The DateTime from unix timestamp in millis.
+        /// </summary>
+        /// <param name="millis">
+        /// The millis.
+        /// </param>
+        /// <returns>
+        /// The <see cref="DateTime"/>.
+        /// </returns>
+        public static DateTime DateTimeFromUnixTimestampMillis(long millis)
+        {
             return UnixEpoch.AddMilliseconds(millis);
         }
 
-        public static long GetCurrentUnixTimestampSeconds() {
+        /// <summary>
+        /// The get current unix timestamp in seconds.
+        /// </summary>
+        /// <returns>
+        /// The <see cref="long"/>.
+        /// </returns>
+        public static long GetCurrentUnixTimestampSeconds()
+        {
             return (long)(DateTime.UtcNow - UnixEpoch).TotalSeconds;
         }
 
-        public static DateTime DateTimeFromUnixTimestampSeconds(long seconds) {
+        /// <summary>
+        /// The DateTime from unix timestamp in seconds.
+        /// </summary>
+        /// <param name="seconds">
+        /// The seconds.
+        /// </param>
+        /// <returns>
+        /// The <see cref="DateTime"/>.
+        /// </returns>
+        public static DateTime DateTimeFromUnixTimestampSeconds(long seconds)
+        {
             return UnixEpoch.AddSeconds(seconds);
         }
     }
