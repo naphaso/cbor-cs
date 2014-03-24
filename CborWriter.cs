@@ -69,6 +69,30 @@ namespace Naphaso.Cbor
             }
         }
 
+        public void Write(int sign, uint value)
+        {
+            if (sign < 0)
+            {
+                this.WriteTypeAndValue(1, value);
+            }
+            else
+            {
+                this.WriteTypeAndValue(0, value);
+            }
+        }
+
+        public void Write(int sign, ulong value)
+        {
+            if (sign < 0)
+            {
+                this.WriteTypeAndValue(1, value);
+            }
+            else
+            {
+                this.WriteTypeAndValue(0, value);
+            }
+        }
+
         /// <summary>
         /// The write.
         /// </summary>
@@ -229,7 +253,7 @@ namespace Naphaso.Cbor
             majorType <<= 5;
             if (value < 24)
             {
-                this.output.WriteByte((byte)(majorType | value));
+                this.output.WriteByte((byte)((uint)majorType | value));
             }
             else if (value < 256)
             {

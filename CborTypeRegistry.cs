@@ -156,7 +156,7 @@ namespace Naphaso.Cbor
         /// <summary>
         /// The namespaces.
         /// </summary>
-        private static readonly string[] namespaces = { "DiverseWorlds.Logic.Network.Model" };
+        private static readonly string[] namespaces = { };
 
         #endregion
 

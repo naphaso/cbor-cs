@@ -39,11 +39,6 @@ namespace Naphaso.Cbor.Parser
         private int currentSize;
 
         /// <summary>
-        /// The inner type reader.
-        /// </summary>
-        private CborTypeReader innerTypeReader;
-
-        /// <summary>
         /// The state.
         /// </summary>
         private ParseState state;

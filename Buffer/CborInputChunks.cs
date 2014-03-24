@@ -150,9 +150,9 @@ namespace Naphaso.Cbor.Buffer
         /// </returns>
         public ulong GetInt64()
         {
-            return ((ulong)this.GetByte() << 56) | ((ulong)this.GetByte() << 48) | ((ulong)this.GetByte() << 40)
-                   | ((ulong)this.GetByte() << 32) | ((ulong)this.GetByte() << 24) | ((ulong)this.GetByte() << 16)
-                   | ((ulong)this.GetByte() << 8) | ((ulong)this.GetByte());
+            return (ulong)((ulong)this.GetByte() << 56) | (ulong)((ulong)this.GetByte() << 48) | (ulong)((ulong)this.GetByte() << 40)
+                   | (ulong)((ulong)this.GetByte() << 32) | (ulong)((ulong)this.GetByte() << 24) | (ulong)((ulong)this.GetByte() << 16)
+                   | (ulong)((ulong)this.GetByte() << 8) | (ulong)(ulong)this.GetByte();
 
             // return BitConverter.ToUInt64(GetBytes(8), 0);
         }

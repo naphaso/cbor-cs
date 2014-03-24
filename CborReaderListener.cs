@@ -7,6 +7,8 @@
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
+using System;
+
 namespace Naphaso.Cbor
 {
     /// <summary>
@@ -95,5 +97,53 @@ namespace Naphaso.Cbor
         void OnTag(uint tag);
 
         #endregion
+    }
+
+    public class CborReaderDebugListener : CborReaderListener
+    {
+        public void OnArray(int size)
+        {
+            Console.WriteLine("on array: {0}", size);
+        }
+
+        public void OnBytes(byte[] value)
+        {
+            Console.WriteLine("on bytes: {0}", BitConverter.ToString(value).Replace("-", "").ToLower());
+        }
+
+        public void OnDouble(double value)
+        {
+            Console.WriteLine("on double: {0}", value);
+        }
+
+        public void OnInteger(uint value, int sign)
+        {
+            Console.WriteLine("on integer: {0}{1}", sign < 0 ? "-" : "", value);
+        }
+
+        public void OnLong(ulong value, int sign)
+        {
+            Console.WriteLine("on long: {0}{1}", sign < 0 ? "-" : "", value);
+        }
+
+        public void OnMap(int size)
+        {
+            Console.WriteLine("on map: {0}", size);
+        }
+
+        public void OnSpecial(uint code)
+        {
+            Console.WriteLine("on special: {0}", code);
+        }
+
+        public void OnString(string value)
+        {
+            Console.WriteLine("on string: {0}", value);
+        }
+
+        public void OnTag(uint tag)
+        {
+            Console.WriteLine("on tag: {0}", tag);
+        }
     }
 }

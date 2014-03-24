@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Naphaso.Cbor</RootNamespace>
     <AssemblyName>Cbor.NET</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -45,6 +46,7 @@
     <Compile Include="Buffer\CborInputChunks.cs" />
     <Compile Include="Buffer\CborInputCyclicBuffer.cs" />
     <Compile Include="Buffer\CborInputMoveBuffer.cs" />
+    <Compile Include="CborDynamicParser.cs" />
     <Compile Include="CborReader.cs" />
     <Compile Include="CborReaderListener.cs" />
     <Compile Include="CborSerializer.cs" />
@@ -58,6 +60,19 @@
     <Compile Include="Parser\CborObjectStream.cs" />
     <Compile Include="Parser\CborTypeReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Types\CborArray.cs" />
+    <Compile Include="Types\CborBytes.cs" />
+    <Compile Include="Types\CborMap.cs" />
+    <Compile Include="Types\CborNumber.cs" />
+    <Compile Include="Types\CborObject.cs" />
+    <Compile Include="Types\CborSpecial.cs" />
+    <Compile Include="Types\CborString.cs" />
+    <Compile Include="Types\Number\CborNumber32.cs" />
+    <Compile Include="Types\Number\CborNumber64.cs" />
+    <Compile Include="Types\Number\CborNumberDouble.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Types\Special\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
