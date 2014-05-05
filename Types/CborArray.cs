@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Naphaso.Cbor.Types {
     public class CborArray : CborObject {
@@ -59,7 +57,7 @@ namespace Naphaso.Cbor.Types {
 
         public override string ToString()
         {
-            return string.Format("[{0}]", String.Join(", ", Value.Select((entry) => entry.ToString())));
+            return string.Format("[{0}]", String.Join(", ", Value.Select((entry) => entry.ToString()).ToArray()));
         }
 
         protected bool Equals(CborArray other)

@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Naphaso.Cbor.Types {
     public class CborMap : CborObject
@@ -61,7 +58,7 @@ namespace Naphaso.Cbor.Types {
 
         public override string ToString()
         {
-            return string.Format("{{{0}}}", String.Join(", ", Value.Select((entry) => entry.Key + ": " + entry.Value)));
+            return string.Format("{{{0}}}", String.Join(", ", Value.Select((entry) => entry.Key + ": " + entry.Value).ToArray()));
         }
 
         protected bool Equals(CborMap other)

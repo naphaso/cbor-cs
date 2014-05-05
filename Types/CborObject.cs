@@ -7,8 +7,8 @@
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
+using System.IO;
 using Naphaso.Cbor.Types.Number;
 
 namespace Naphaso.Cbor.Types
@@ -206,6 +206,16 @@ namespace Naphaso.Cbor.Types
             }
 
             return writer;
+        }
+
+        public byte[] Serialize()
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                CborWriter writer = new CborWriter(memory);
+                this.Write(writer);
+                return memory.ToArray();
+            }
         }
 
         #endregion

@@ -1,13 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.Remoting;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
 using Naphaso.Cbor.Buffer;
-using Naphaso.Cbor.Parser;
 using Naphaso.Cbor.Types;
 using Naphaso.Cbor.Types.Number;
 
@@ -188,7 +182,9 @@ namespace Naphaso.Cbor
                 }
                 else // array
                 {
-                    state.currentArray[state.currentIndex++] = obj;
+                    state.currentArray[state.currentIndex] = obj;
+
+                    state.currentIndex++;
 
                     if (state.currentIndex == state.maximumIndex)
                     {

@@ -1,5 +1,4 @@
-﻿using DiverseWorlds.Logic.Network.Cbor.Exception;
-using Naphaso.Cbor.Types.Number;
+﻿using Naphaso.Cbor.Types.Number;
 
 namespace Naphaso.Cbor.Types {
     /// <summary>
@@ -53,20 +52,6 @@ namespace Naphaso.Cbor.Types {
 
             writer.writeSpecial(Value);
             return writer;
-        }
-
-
-        public override CborSpecial AsSpecial
-        {
-            get { return this; }
-        }
-
-        public override bool IsSpecial
-        {
-            get
-            {
-                return true;
-            }
         }
 
         public override string ToString()
