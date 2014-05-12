@@ -232,6 +232,11 @@ namespace Naphaso.Cbor.Types
             }
         }
 
+        public static implicit operator CborObject(bool value)
+        {
+            return value ? CborSpecial.True : CborSpecial.False;
+        }
+
         public static implicit operator CborObject(long value)
         {
             if (value < 0)

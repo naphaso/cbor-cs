@@ -6,7 +6,8 @@ namespace Naphaso.Cbor.Types {
     /// </summary>
     public class CborSpecial : CborObject
     {
-
+        public static readonly CborSpecial True = new CborSpecial(21u);
+        public static readonly CborSpecial False = new CborSpecial(22u);
         public CborNumber Value { get; set; }
 
 

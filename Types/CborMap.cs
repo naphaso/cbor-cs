@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Naphaso.Cbor.Types {
-    public class CborMap : CborObject
+    public class CborMap : CborObject, IEnumerable<KeyValuePair<CborObject, CborObject>>
     {
         public Dictionary<CborObject, CborObject> Value { get; set; }
 
@@ -21,6 +22,7 @@ namespace Naphaso.Cbor.Types {
         {
             this.Value = map;
         }
+
 
         public override bool IsMap
         {
@@ -56,6 +58,11 @@ namespace Naphaso.Cbor.Types {
             return writer;
         }
 
+        public IEnumerator<KeyValuePair<CborObject, CborObject>> GetEnumerator()
+        {
+            return Value.GetEnumerator();
+        }
+
         public override string ToString()
         {
             return string.Format("{{{0}}}", String.Join(", ", Value.Select((entry) => entry.Key + ": " + entry.Value).ToArray()));
@@ -77,6 +84,11 @@ namespace Naphaso.Cbor.Types {
         public override int GetHashCode()
         {
             return Value.GetHashCode();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
 
         public static bool operator ==(CborMap left, CborMap right)
