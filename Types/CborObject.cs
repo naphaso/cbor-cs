@@ -166,6 +166,11 @@ namespace Naphaso.Cbor.Types
             }
         }
 
+        public bool IsNull
+        {
+            get { return IsSpecial && AsSpecial.IsNull; }
+        }
+
         #endregion
 
         #region Properties

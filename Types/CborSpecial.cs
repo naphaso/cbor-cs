@@ -6,8 +6,9 @@ namespace Naphaso.Cbor.Types {
     /// </summary>
     public class CborSpecial : CborObject
     {
+        public static readonly CborSpecial Null = new CborSpecial(22u);
         public static readonly CborSpecial True = new CborSpecial(21u);
-        public static readonly CborSpecial False = new CborSpecial(22u);
+        public static readonly CborSpecial False = new CborSpecial(20u);
         public CborNumber Value { get; set; }
 
 
@@ -34,7 +35,7 @@ namespace Naphaso.Cbor.Types {
 
         public bool IsFalse
         {
-            get { return Value == 22; }
+            get { return Value == 20; }
         }
 
         public bool IsBool
@@ -46,6 +47,7 @@ namespace Naphaso.Cbor.Types {
         {
             get { return IsTrue; }
         }
+
 
         public override CborWriter Write(CborWriter writer)
         {
