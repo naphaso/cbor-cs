@@ -48,6 +48,16 @@ namespace Naphaso.Cbor.Types {
             get { return IsTrue; }
         }
 
+        public override CborSpecial AsSpecial
+        {
+            get { return this; }
+        }
+
+        public override bool IsSpecial
+        {
+            get { return true; }
+        }
+
 
         public override CborWriter Write(CborWriter writer)
         {
